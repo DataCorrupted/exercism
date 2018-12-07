@@ -1,3 +1,5 @@
+use std::collections::LinkedList;
+
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct CircularPointer{
 	idx: usize,
@@ -14,10 +16,8 @@ impl CircularPointer{
 }
 
 pub struct CircularBuffer<T> {
-	array: Vec<T>,
-	head: CircularPointer,
-	tail: CircularPointer,
-	is_full: bool,
+	list: LinkedList<T>,
+	capacity: usize,
 }
 
 #[derive(Debug, PartialEq)]
@@ -29,50 +29,38 @@ pub enum Error {
 impl<T> CircularBuffer<T>{
 	pub fn new(capacity: usize) -> Self {
 		Self {
-			array: Vec::with_capacity(capacity),
-			head: CircularPointer::new(capacity),
-			tail: CircularPointer::new(capacity),
-			is_full: false,
+			list: LinkedList::new(),
+			capacity: capacity,
 		}
 	}
 
 	pub fn write(&mut self, _element: T) -> Result<(), Error> {
-		if self.is_full {
+		if self.is_full() {
 			Err(Error::FullBuffer)
 		} else {
-			self.array[self.tail.get_idx()] = _element;
-			self.tail.next();
-			if self.tail == self.head {
-				self.is_full = true;
-			}
-
+			self.list.push_back(_element);
 			Ok(())
 		}
 	}
 
 	pub fn read(&mut self) -> Result<T, Error> {
-		if self.head == self.tail{
-			Err(Error::EmptyBuffer)
-		} else {
-			Ok(self.array[self.head.get_idx()])
+		match self.list.pop_front() {
+			Some(t) => Ok(t),
+			None    => Err(Error::EmptyBuffer),
 		}
 	}
 
 	pub fn clear(&mut self) {
-		self.head = self.tail;
-		self.is_full = false;
+		self.list.clear();
 	}
 
 	pub fn overwrite(&mut self, _element: T) {
-		if !self.is_full{
-			self.write(_element);
-		} else {
-			self.array[self.tail.get_idx()] = _element;
-			self.tail.next();
-			// Over write the last element.
-			self.head.next();
-			// It's already full, no need to maintain is_full
+		if self.is_full(){
+			self.list.pop_front();
 		}
+		let _ = self.write(_element);
 	}
+
+	fn is_full(&self) -> bool { self.list.len() == self.capacity }
 
 }
